@@ -36,7 +36,7 @@ public class ShowResult : MonoBehaviour
     //シーンをリロードする
     public void ReloadScene()
     {
-        Map.gameResult = Map.GameResult.NotYet;
+        Map.gameResult = Map.GameResult.Connect;
         Map.GameMap = new Map.map[5, 5];
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }

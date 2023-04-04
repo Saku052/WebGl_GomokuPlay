@@ -5,8 +5,12 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using System;
 
+using Random = UnityEngine.Random;
+
 public class MapController : MonoBehaviour
 {
+    [SerializeField] private GameObject mapPanel;
+
     // eventSystem型の変数を宣言　
     private EventSystem eventSystem;
    
@@ -17,7 +21,7 @@ public class MapController : MonoBehaviour
     // ボタンの名前を取得
     public void GetButtonName()
     {
-        if(Map.gameResult == Map.GameResult.NotYet){
+        if(Map.gameResult == Map.GameResult.Connect){
             //有効なイベントシステムを取得
             eventSystem=EventSystem.current;
 
@@ -26,6 +30,16 @@ public class MapController : MonoBehaviour
             Map.GetButtonPosition(button_ob);
         }
     }    
+
+    //シーン移行した時にMapを表示する
+    private void Start()
+    {
+        //場面の色を変更する
+        Map.ShowMap(mapPanel);
+
+        //敵の位置を設定する
+        if(Map.EnemyMap == null)    Map.SetEnemyPosition();
+    }
     
 
 }
@@ -40,14 +54,32 @@ public static class Map
 {
     public static map[,] GameMap;
     public static int[,] GamePoint;
-    private static int size = 5;
+    public static Enemyrank[,] EnemyMap;
+    public static int size = 5;
     //ゲームリザルトを取得する
-    public static GameResult gameResult = GameResult.NotYet;
+    public static GameResult gameResult = GameResult.Connect;
 
     static Map()
     {
         Map.GameMap = new map[size, size];
         Map.GamePoint = new int[size, size];
+    }
+
+    //Mapを表示する
+    public static void ShowMap(GameObject mapPanel)
+    {
+        for(int i = 0; i < size; i++){
+            for(int j = 0; j < size; j++){
+                if(GameMap[i, j] == map.A){
+                    mapPanel.transform.GetChild(Map.GetButtonNumber(i, j)).GetComponent<Image>().color =
+                    new Color(0.26f, 0.80f, 0.90f, 0.80f); //青色に変える
+
+                }else if(GameMap[i, j] == map.B){
+                    mapPanel.transform.GetChild(Map.GetButtonNumber(i, j)).GetComponent<Image>().color =
+                    new Color(0.92f, 0.36f, 0.21f, 0.80f); // ピンク色に変える
+                }
+            }
+        }
     }
 
     //ーーーーーーーーーーーーーーーーーーーー
@@ -57,14 +89,42 @@ public static class Map
     //数字からボタンの位置を取得する
     public static void GetButtonPosition(GameObject button)
     {
+        //ボタンの位置を取得する
         int n = int.Parse(button.name.Replace("Button", ""));
+
 
         int x = (n-1)%size;
         int y = ((n-1)-x)/size;
 
-        if(IsN(x, y)){
-            button.GetComponent<Image>().color = new Color(1, 0.5f, 0.2f, 1);
-            ChangeToA(x, y);
+        if(IsN(x, y)){  //選択可能な場面だった場合
+
+            //ステータス等を表示する
+            //Level, MaxExp, HP, ATK, DEF, Name, CR, CD
+            if(Map.EnemyMap[x, y] == Enemyrank.Rank1){
+                //イラストの変更
+                MapSlider.instance.SetPlayer2Image(Resources.Load<Sprite>("Char/" + GetStatus.EnemyRank1.CharCode.ToString() + "_Card"));
+
+                //ステータスの変更
+                GetStatus.Enemy = new Status(GetStatus.EnemyRank1);
+                StatusInit.instance.ShowStatus(GetStatus.MainPlayer, GetStatus.Enemy);
+            } else if(Map.EnemyMap[x, y] == Enemyrank.Rank2){
+                //イラストの変更
+                MapSlider.instance.SetPlayer2Image(Resources.Load<Sprite>("Char/" + GetStatus.EnemyRank2.CharCode.ToString() + "_Card"));
+                
+                //ステータスの変更
+                GetStatus.Enemy = new Status(GetStatus.EnemyRank2);
+                StatusInit.instance.ShowStatus(GetStatus.MainPlayer, GetStatus.Enemy);
+            } else if(Map.EnemyMap[x, y] == Enemyrank.Rank3){
+                //イラストの変更
+                MapSlider.instance.SetPlayer2Image(Resources.Load<Sprite>("Char/" + GetStatus.EnemyRank3.CharCode.ToString() + "_Card"));
+
+                //ステータスの変更
+                GetStatus.Enemy = new Status(GetStatus.EnemyRank3);
+                StatusInit.instance.ShowStatus(GetStatus.MainPlayer, GetStatus.Enemy);
+            }
+
+            //選択した場所を表示する
+            ActiveBattle.Instance.SetSelected(x, y);
         }
     }
 
@@ -76,8 +136,7 @@ public static class Map
     public static void ChangeToA(int x, int y)
     {
         Map.GameMap[x, y] = map.A;
-        ConnectEnemy.instance.AIEnemyTurn(Map.GameMap);
-
+ 
         //ゲームに勝利したか確認する
         CheckResult(Map.GameMap);
     }
@@ -104,6 +163,44 @@ public static class Map
     public static int GetButtonNumber(int x, int y)
     {
         return x + y*size;
+    }
+
+    //ーーーーーーーーーーーーーーーーーーーー
+    //選択した場所のマップの位置を判定する
+    //ーーーーーーーーーーーーーーーーーーーー
+
+
+    //敵の位置を指定する
+    public static void SetEnemyPosition()
+    {
+        Map.EnemyMap = new Enemyrank[size, size];
+        
+        for(int x = 0; x < size; x++){
+            for(int y = 0; y < size; y++){
+                    //乱数を設定する
+                    int rand = Random.Range(0, 100);
+
+                //敵の出現ランクをランダムで設定する
+                if((y == 0 || y == 4 || x == 0 || x == 4) && GameMap[x, y] == map.N)
+                {
+                    if(rand < 90)   EnemyMap[x, y] = Enemyrank.Rank1;
+                    else            EnemyMap[x, y] = Enemyrank.Rank2;
+                }
+                else if((y == 1 || y == 3 || x == 1 || x == 3) && GameMap[x, y] == map.N)
+                {
+                    if(rand < 50)       EnemyMap[x, y] = Enemyrank.Rank1;
+                    else if(rand < 90)  EnemyMap[x, y] = Enemyrank.Rank2;
+                    else                EnemyMap[x, y] = Enemyrank.Rank3;
+                }
+                else if (GameMap[x,y] == map.N)
+                {
+                    if(rand < 30)       EnemyMap[x, y] = Enemyrank.Rank1;
+                    else if(rand < 70)  EnemyMap[x, y] = Enemyrank.Rank2;
+                    else                EnemyMap[x, y] = Enemyrank.Rank3; 
+                }       
+            }
+        }
+        
     }
 
     //ーーーーーーーーーーーーーーーーーーーー
@@ -183,10 +280,12 @@ public static class Map
             
     }
 
-
+    public enum Enemyrank{
+        Rank1, Rank2, Rank3
+    }
 
     public enum GameResult{
-        AWin, BWin, Draw, NotYet, End
+        AWin, BWin, Draw, Connect, End, RpgGame
     }
 
     //ーーーーーーーーーーーーーーーーーーーー
