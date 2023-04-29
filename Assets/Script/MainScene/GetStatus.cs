@@ -32,6 +32,7 @@ public class GetStatus : MonoBehaviour
 
     void ApplyRemoteSettings(ConfigResponse configResponse)
     {
+        Debug.Log(RemoteConfigService.Instance.appConfig.GetJson("Forest1").ToString() + "end");
 
         var DemonLord = JsonConvert.DeserializeObject<List<Root>>(RemoteConfigService.Instance.appConfig.GetJson("MainInit").ToString());
         var Forest1 = JsonConvert.DeserializeObject<List<Root>>(RemoteConfigService.Instance.appConfig.GetJson("Forest1").ToString());
